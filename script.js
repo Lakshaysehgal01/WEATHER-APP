@@ -27,6 +27,96 @@ const temp = document.getElementById("temp"),
 let currentCity = "";
 let currentUnit = "c";
 let hourlyorWeek = "week";
+// [NEW] Function to get the user's current location
+function getUserLocation() {
+  if (navigator.geolocation) { // [NEW] Check if browser supports Geolocation
+    navigator.geolocation.getCurrentPosition(showPosition, showError); // [NEW] Get current position
+  } else {
+    alert("Geolocation is not supported by this browser."); // [NEW] Handle unsupported browsers
+  }
+}
+
+// [NEW] Function to handle the success case of geolocation
+function showPosition(position) {
+  const lat = position.coords.latitude; // [NEW] Get latitude
+  const lon = position.coords.longitude; // [NEW] Get longitude
+  
+  // [NEW] Call the weather API using lat and lon
+  fetch(
+    `https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/${lat},${lon}?unitGroup=metric&key=EJ6UBL2JEQGYB3AA4ENASN62J&contentType=json`,
+    {
+      method: "GET",
+      headers: {},
+    }
+  )
+    .then((response) => response.json())
+    .then((data) => {
+      let today = data.currentConditions;
+      if (currentUnit === "c") {
+        temp.innerText = today.temp;
+      } else {
+        temp.innerText = celciusToFahrenheit(today.temp);
+      }
+      currentLocation.innerText = data.resolvedAddress;
+      condition.innerText = today.conditions;
+      rain.innerText = "Perc - " + today.precip + "%";
+      uvIndex.innerText = today.uvindex;
+      windSpeed.innerText = today.windspeed;
+      measureUvIndex(today.uvindex);
+      mainIcon.src = getIcon(today.icon);
+      changeBackground(today.icon);
+      humidity.innerText = today.humidity + "%";
+      updateHumidityStatus(today.humidity);
+      visibilty.innerText = today.visibility;
+      updateVisibiltyStatus(today.visibility);
+      airQuality.innerText = today.winddir;
+      updateAirQualityStatus(today.winddir);
+      sunRise.innerText = covertTimeTo12HourFormat(today.sunrise);
+      sunSet.innerText = covertTimeTo12HourFormat(today.sunset);
+
+      // Show forecast (hourly or weekly)
+      if (hourlyorWeek === "hourly") {
+        updateForecast(data.days[0].hours, currentUnit, "day");
+      } else {
+        updateForecast(data.days, currentUnit, "week");
+      }
+    })
+    .catch((err) => {
+      alert("City not found in our database");
+    });
+}
+
+// [NEW] Error handling if geolocation fails
+function showError(error) {
+  switch (error.code) {
+    case error.PERMISSION_DENIED:
+      alert("User denied the request for Geolocation."); // [NEW] Handle permission denial
+      break;
+    case error.POSITION_UNAVAILABLE:
+      alert("Location information is unavailable."); // [NEW] Handle unavailable position
+      break;
+    case error.TIMEOUT:
+      alert("The request to get user location timed out."); // [NEW] Handle timeout
+      break;
+    case error.UNKNOWN_ERROR:
+      alert("An unknown error occurred."); // [NEW] Handle unknown errors
+      break;
+  }
+}
+
+// [MODIFIED] Initialize location when the app starts by calling getUserLocation
+getUserLocation(); // [NEW] Call this function on load to get the user's location
+
+// [UNCHANGED] Function to fetch weather data when a location is entered manually
+searchForm.addEventListener("submit", (e) => {
+  e.preventDefault();
+  let location = search.value;
+  if (location) {
+    currentCity = location;
+    getWeatherData(location, currentUnit, hourlyorWeek);
+  }
+});
+
 
 // function to get date and time
 function getDateTime() {
